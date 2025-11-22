@@ -2,6 +2,7 @@ using System.Security.Claims;
 using LifeRAG.Core.DTOs;
 using LifeRAG.Core.Entities;
 using LifeRAG.Core.Interfaces;
+using LifeRAG.Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using LifeRAG.Infrastructure.Data;
@@ -101,7 +102,7 @@ public static class ChatEndpoints
             AppDbContext dbContext,
             IRepository<ChatSession> sessionRepository,
             IRepository<ChatMessage> messageRepository,
-            IRagService ragService) =>
+            SemanticKernelService semanticKernelService) =>
         {
             var userId = Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -132,7 +133,7 @@ public static class ChatEndpoints
             
             var chatHistory = messages.Select(m => (m.Role, m.Content)).ToList();
 
-            var answer = await ragService.QueryAsync(request.Content, chatHistory);
+            var answer = await semanticKernelService.ChatAsync(request.Content, chatHistory);
 
             var assistantMessage = new ChatMessage
             {
