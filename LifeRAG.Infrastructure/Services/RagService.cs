@@ -1,3 +1,4 @@
+using Grpc.Core;
 using Grpc.Net.Client;
 using LifeRAG.Core.Grpc;
 using LifeRAG.Core.Interfaces;
