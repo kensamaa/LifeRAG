@@ -21,6 +21,10 @@ public static class DependencyInjection
 
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IRagService, RagService>();
+        services.AddScoped<IBackgroundJobService, BackgroundJobService>();
+        services.AddScoped<DocumentIngestionJob>();
+        services.AddScoped<DocumentDeletionJob>();
 
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)

@@ -98,8 +98,10 @@ public static class ChatEndpoints
             Guid sessionId,
             [FromBody] SendMessageRequest request,
             HttpContext context,
+            AppDbContext dbContext,
             IRepository<ChatSession> sessionRepository,
-            IRepository<ChatMessage> messageRepository) =>
+            IRepository<ChatMessage> messageRepository,
+            IRagService ragService) =>
         {
             var userId = Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -119,13 +121,25 @@ public static class ChatEndpoints
             };
 
             await messageRepository.AddAsync(userMessage);
+            await messageRepository.SaveChangesAsync();
+
+            var messages = await dbContext.ChatMessages
+                .Where(m => m.ChatSessionId == sessionId && m.Id != userMessage.Id)
+                .OrderByDescending(m => m.CreatedAt)
+                .Take(6)
+                .OrderBy(m => m.CreatedAt)
+                .ToListAsync();
+            
+            var chatHistory = messages.Select(m => (m.Role, m.Content)).ToList();
+
+            var answer = await ragService.QueryAsync(request.Content, chatHistory);
 
             var assistantMessage = new ChatMessage
             {
                 Id = Guid.NewGuid(),
                 ChatSessionId = sessionId,
                 Role = "assistant",
-                Content = "This is a placeholder response. RAG functionality will be added later.",
+                Content = answer,
                 CreatedAt = DateTime.UtcNow
             };
 

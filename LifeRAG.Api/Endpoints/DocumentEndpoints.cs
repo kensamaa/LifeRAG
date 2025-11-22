@@ -3,6 +3,7 @@ using LifeRAG.Core.DTOs;
 using LifeRAG.Core.Entities;
 using LifeRAG.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace LifeRAG.Api.Endpoints;
 
@@ -17,7 +18,9 @@ public static class DocumentEndpoints
         group.MapPost("/upload", async (
             HttpContext context,
             IFormFile file,
-            IRepository<Document> documentRepository) =>
+            IRepository<Document> documentRepository,
+            IBackgroundJobService backgroundJobService,
+            ILogger<Program> logger) =>
         {
             var userId = Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -43,12 +46,18 @@ public static class DocumentEndpoints
             await documentRepository.AddAsync(document);
             await documentRepository.SaveChangesAsync();
 
-            return Results.Ok(new DocumentUploadResponse(
-                document.Id,
-                document.FileName,
-                document.FileSize,
-                document.UploadedAt
-            ));
+            var jobId = backgroundJobService.EnqueueDocumentIngestion(document.Id);
+            logger.LogInformation("Document {DocumentId} uploaded, ingestion job {JobId} enqueued", document.Id, jobId);
+
+            return Results.Accepted($"/api/documents/{document.Id}", new
+            {
+                id = document.Id,
+                fileName = document.FileName,
+                fileSize = document.FileSize,
+                uploadedAt = document.UploadedAt,
+                status = "Processing",
+                jobId
+            });
         }).DisableAntiforgery();
 
         group.MapGet("/", async (
@@ -88,7 +97,8 @@ public static class DocumentEndpoints
         group.MapDelete("/{id:guid}", async (
             Guid id,
             HttpContext context,
-            IRepository<Document> documentRepository) =>
+            IRepository<Document> documentRepository,
+            IBackgroundJobService backgroundJobService) =>
         {
             var userId = Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var document = await documentRepository.GetByIdAsync(id);
@@ -97,6 +107,8 @@ public static class DocumentEndpoints
             {
                 return Results.NotFound();
             }
+
+            backgroundJobService.EnqueueDocumentDeletion(document.Id);
 
             await documentRepository.DeleteAsync(document);
             await documentRepository.SaveChangesAsync();
