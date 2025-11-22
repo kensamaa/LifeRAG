@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package rag;
+
+service RAGService {
+  rpc Ingest (IngestRequest) returns (IngestResponse);
+  rpc Query (QueryRequest) returns (stream QueryResponse);
+}
+
+message IngestRequest {
+  string document_id = 1;
+  string filename = 2;
+  string content_type = 3;
+  bytes file_content = 4;
+}
+
+message IngestResponse {
+  string document_id = 1;
+  string filename = 2;
+  int32 chunks_created = 3;
+  string status = 4;
+}
+
+message ChatMessage {
+  string role = 1;
+  string content = 2;
+}
+
+message QueryRequest {
+  string query = 1;
+  repeated ChatMessage chat_history = 2;
+  int32 top_k = 3;
+}
+
+message RetrievedContext {
+  string text = 1;
+  double score = 2;
+  map<string, string> metadata = 3;
+}
+
+message QueryResponse {
+  string answer = 1;
+  repeated RetrievedContext contexts = 2;
+  repeated string sources = 3;
+}
