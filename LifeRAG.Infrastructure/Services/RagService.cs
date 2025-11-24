@@ -70,12 +70,28 @@ public class RagService : IRagService
             using var call = _grpcClient.Query(request);
             
             var fullAnswer = new StringBuilder();
+            var sources = new List<string>();
+            
             await foreach (var response in call.ResponseStream.ReadAllAsync())
             {
                 fullAnswer.Append(response.Answer);
+                
+                // Collect sources from the response
+                if (response.Sources != null && response.Sources.Count > 0)
+                {
+                    sources.AddRange(response.Sources);
+                }
             }
 
-            return fullAnswer.ToString();
+            // If we have sources, append them to the answer
+            var result = fullAnswer.ToString();
+            if (sources.Any())
+            {
+                var uniqueSources = sources.Distinct().ToList();
+                result += $"\n\nSources: {string.Join(", ", uniqueSources)}";
+            }
+
+            return result;
 
         }
         catch (Exception ex)

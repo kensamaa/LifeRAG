@@ -4,7 +4,7 @@
 
 [![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=next.js)](https://nextjs.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## 🎯 What It Does
@@ -168,7 +168,10 @@ Frontend will be available at `http://localhost:3001`
 ```bash
 # Install Ollama from https://ollama.ai/
 
-# Pull the model
+# Pull the embedding model
+ollama pull nomic-embed-text-v1.5
+
+# Pull the LLM model
 ollama pull llama3.1:8b
 
 # Start Ollama (usually runs automatically)
@@ -271,14 +274,14 @@ CHUNK_OVERLAP=50
 - **Communication**: gRPC
 
 ### RAG Service (Python)
-- **Framework**: FastAPI + gRPC
+- **Framework**: gRPC Server
 - **Embeddings**: nomic-embed-text-v1.5 (HuggingFace)
 - **Vector DB**: Qdrant
 - **RAG Framework**: LlamaIndex
 - **LLM**: Ollama (Llama 3.1)
 
 ### Frontend
-- **Framework**: Next.js 16 (App Router)
+- **Framework**: Next.js 15 (App Router)
 - **Styling**: TailwindCSS
 - **Language**: TypeScript
 
@@ -337,9 +340,6 @@ CHUNK_OVERLAP=50
 - [ ] Voice chat
 - [ ] Export conversations
 
-## 🤝 Contributing
-
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ## 📄 License
 

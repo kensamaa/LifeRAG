@@ -66,7 +66,8 @@ public class SemanticKernelService
             var history = new ChatHistory();
             history.AddSystemMessage(@"You are a helpful AI assistant with access to the user's personal knowledge base.
 When answering questions, use the RetrieveContext function to search for relevant information from uploaded documents.
-Always cite your sources when using information from documents.");
+When citing sources, always mention the specific document filename (e.g., 'Profile.pdf', 'Resume.docx') instead of generic labels.
+Format your sources like this: Source: [actual_filename.pdf]");
 
             // Add previous conversation history
             foreach (var (role, content) in chatHistory)
