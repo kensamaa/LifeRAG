@@ -48,8 +48,13 @@ public static class ChatEndpoints
         {
             var userId = Guid.Parse(context.User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            var sessions = await dbContext.ChatSessions
+            var sessionsWithMessages = await dbContext.ChatSessions
+                .Include(s => s.Messages)
                 .Where(s => s.UserId == userId)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync();
+
+            var sessions = sessionsWithMessages
                 .Select(s => new ChatSessionListItem(
                     s.Id,
                     s.Title,
@@ -57,8 +62,7 @@ public static class ChatEndpoints
                     s.UpdatedAt,
                     s.Messages.Count
                 ))
-                .OrderByDescending(s => s.CreatedAt)
-                .ToListAsync();
+                .ToList();
 
             return Results.Ok(sessions);
         });

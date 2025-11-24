@@ -4,6 +4,7 @@ using LifeRAG.Core.Grpc;
 using LifeRAG.Core.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Text;
 
 namespace LifeRAG.Infrastructure.Services;
 
@@ -12,18 +13,10 @@ public class RagService : IRagService
     private readonly RAGService.RAGServiceClient _grpcClient;
     private readonly ILogger<RagService> _logger;
 
-    public RagService(IConfiguration configuration, ILogger<RagService> logger)
+    public RagService(RAGService.RAGServiceClient grpcClient, ILogger<RagService> logger)
     {
+        _grpcClient = grpcClient;
         _logger = logger;
-        var grpcUrl = configuration["PythonRagService:GrpcUrl"] ?? "http://localhost:50051";
-        
-        var channel = GrpcChannel.ForAddress(grpcUrl, new GrpcChannelOptions
-        {
-            MaxReceiveMessageSize = 100 * 1024 * 1024,
-            MaxSendMessageSize = 100 * 1024 * 1024
-        });
-        
-        _grpcClient = new RAGService.RAGServiceClient(channel);
     }
 
     public async Task<bool> IngestDocumentAsync(Guid documentId, byte[] fileData, string fileName, string contentType)
@@ -76,12 +69,14 @@ public class RagService : IRagService
 
             using var call = _grpcClient.Query(request);
             
+            var fullAnswer = new StringBuilder();
             await foreach (var response in call.ResponseStream.ReadAllAsync())
             {
-                return response.Answer;
+                fullAnswer.Append(response.Answer);
             }
 
-            return "No answer generated";
+            return fullAnswer.ToString();
+
         }
         catch (Exception ex)
         {
@@ -95,6 +90,7 @@ public class RagService : IRagService
         try
         {
             _logger.LogInformation("Document deletion via gRPC not implemented, using vector store metadata cleanup");
+            await Task.CompletedTask;
             return true;
         }
         catch (Exception ex)

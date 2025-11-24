@@ -1,6 +1,12 @@
 import grpc
 from concurrent import futures
 import logging
+import sys
+import os
+
+# Add protos directory to sys.path to fix import errors in generated code
+sys.path.append(os.path.join(os.path.dirname(__file__), "protos"))
+
 from protos import rag_pb2, rag_pb2_grpc
 from rag_engine import rag_engine
 from document_processor import DocumentProcessor

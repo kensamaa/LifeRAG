@@ -7,10 +7,19 @@ using LifeRAG.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddGrpcClient<LifeRAG.Core.Grpc.RAGService.RAGServiceClient>(o =>
+{
+    o.Address = new Uri(builder.Configuration["PythonRagService:GrpcUrl"] ?? "http://localhost:50051");
+})
+.AddPolicyHandler(Polly.Policy.Handle<HttpRequestException>()
+    .OrResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
+    .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

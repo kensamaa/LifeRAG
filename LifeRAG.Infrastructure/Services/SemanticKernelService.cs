@@ -34,9 +34,13 @@ public class SemanticKernelService
         {
             var ollamaUrl = configuration["SemanticKernel:Ollama:Url"] ?? "http://localhost:11434";
             var model = configuration["SemanticKernel:Ollama:Model"] ?? "llama3.1:8b";
+            
+            // Ollama's OpenAI-compatible endpoint
+            var ollamaEndpoint = new Uri($"{ollamaUrl}/v1");
+            
             builder.AddOpenAIChatCompletion(
                 modelId: model,
-                endpoint: new Uri(ollamaUrl),
+                endpoint: ollamaEndpoint,
                 apiKey: "not-needed"
             );
         }
@@ -63,34 +67,19 @@ public class SemanticKernelService
                 }).ToList()
             );
 
-            var prompt = @$"
-You are a highly intelligent personal AI assistant with access to the user's private knowledge base.
-
-Your capabilities:
-1. Use the {{{{rag.RetrieveContext}}}} function to search the user's documents, notes, and personal data
-2. Provide accurate answers based on retrieved context
-3. Maintain conversation context from chat history
-4. If information isn't in the knowledge base, say so clearly
+            var prompt = $@"You are a helpful AI assistant.
 
 Chat History:
 {string.Join("\n", chatHistory.Select(h => $"{h.role.ToUpper()}: {h.content}"))}
 
-User Question: {userMessage}
-
-Instructions:
-- First, retrieve relevant context using the rag plugin
-- Then provide a comprehensive answer based on that context
-- Cite sources when possible
-- Be conversational and helpful
-";
+User: {userMessage}";
 
             var function = _kernel.CreateFunctionFromPrompt(
                 prompt,
                 new OpenAIPromptExecutionSettings
                 {
                     Temperature = 0.7,
-                    MaxTokens = 1000,
-                    ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+                    MaxTokens = 1000
                 }
             );
 

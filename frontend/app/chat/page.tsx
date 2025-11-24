@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ChatSession, ChatMessage, Document } from '@/lib/api';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { toast } from 'sonner';
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -40,6 +43,7 @@ export default function ChatPage() {
       setSessions(data);
     } catch (err) {
       console.error('Failed to load sessions', err);
+      toast.error('Failed to load chat sessions');
     }
   };
 
@@ -49,6 +53,7 @@ export default function ChatPage() {
       setMessages(data.messages);
     } catch (err) {
       console.error('Failed to load messages', err);
+      toast.error('Failed to load messages');
     }
   };
 
@@ -58,6 +63,7 @@ export default function ChatPage() {
       setDocuments(data);
     } catch (err) {
       console.error('Failed to load documents', err);
+      toast.error('Failed to load documents');
     }
   };
 
@@ -68,6 +74,7 @@ export default function ChatPage() {
       setCurrentSession(session.id);
     } catch (err) {
       console.error('Failed to create session', err);
+      toast.error('Failed to create new chat session');
     }
   };
 
@@ -81,6 +88,7 @@ export default function ChatPage() {
       await loadSessions();
     } catch (err) {
       console.error('Failed to send message', err);
+      toast.error('Failed to send message');
     }
   };
 
@@ -92,8 +100,10 @@ export default function ChatPage() {
     try {
       await api.uploadDocument(file);
       await loadDocuments();
+      toast.success('Document uploaded successfully');
     } catch (err) {
       console.error('Failed to upload file', err);
+      toast.error('Failed to upload document');
     } finally {
       setUploading(false);
     }
@@ -183,7 +193,11 @@ export default function ChatPage() {
                         : 'bg-white border border-gray-200'
                     }`}
                   >
-                    <div className="text-sm">{msg.content}</div>
+                    <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
                     <div className="text-xs mt-1 opacity-70">
                       {new Date(msg.createdAt).toLocaleTimeString()}
                     </div>

@@ -25,7 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IBackgroundJobService, BackgroundJobService>();
         services.AddScoped<DocumentIngestionJob>();
         services.AddScoped<DocumentDeletionJob>();
-        services.AddSingleton<SemanticKernelService>();
+        services.AddScoped<SemanticKernelService>();
 
         services.AddHangfire(config => config
             .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
