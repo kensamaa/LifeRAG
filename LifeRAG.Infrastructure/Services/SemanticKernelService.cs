@@ -59,6 +59,32 @@ public class SemanticKernelService
     {
         try
         {
+            // Get the chat completion service
+            var chatCompletionService = _kernel.GetRequiredService<IChatCompletionService>();
+            
+            // Create chat history with system message
+            var history = new ChatHistory();
+            history.AddSystemMessage(@"You are a helpful AI assistant with access to the user's personal knowledge base.
+When answering questions, use the RetrieveContext function to search for relevant information from uploaded documents.
+Always cite your sources when using information from documents.");
+
+            // Add previous conversation history
+            foreach (var (role, content) in chatHistory)
+            {
+                if (role.ToLower() == "user")
+                {
+                    history.AddUserMessage(content);
+                }
+                else if (role.ToLower() == "assistant")
+                {
+                    history.AddAssistantMessage(content);
+                }
+            }
+
+            // Add current user message
+            history.AddUserMessage(userMessage);
+
+            // Prepare chat history JSON for the RAG plugin
             var chatHistoryJson = System.Text.Json.JsonSerializer.Serialize(
                 chatHistory.Select(h => new Dictionary<string, string>
                 {
@@ -67,29 +93,22 @@ public class SemanticKernelService
                 }).ToList()
             );
 
-            var prompt = $@"You are a helpful AI assistant.
+            // Enable automatic function calling
+            var executionSettings = new OpenAIPromptExecutionSettings
+            {
+                Temperature = 0.7,
+                MaxTokens = 1000,
+                ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
+            };
 
-Chat History:
-{string.Join("\n", chatHistory.Select(h => $"{h.role.ToUpper()}: {h.content}"))}
-
-User: {userMessage}";
-
-            var function = _kernel.CreateFunctionFromPrompt(
-                prompt,
-                new OpenAIPromptExecutionSettings
-                {
-                    Temperature = 0.7,
-                    MaxTokens = 1000
-                }
+            // Get response with automatic RAG invocation
+            var result = await chatCompletionService.GetChatMessageContentAsync(
+                history,
+                executionSettings,
+                _kernel
             );
 
-            var result = await _kernel.InvokeAsync(function, new KernelArguments
-            {
-                ["input"] = userMessage,
-                ["chatHistory"] = chatHistoryJson
-            });
-
-            return result.ToString();
+            return result.Content ?? "I couldn't generate a response.";
         }
         catch (Exception ex)
         {
