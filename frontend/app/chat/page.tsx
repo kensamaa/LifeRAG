@@ -14,6 +14,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -81,14 +82,35 @@ export default function ChatPage() {
   const sendMessage = async () => {
     if (!input.trim() || !currentSession) return;
 
+    const userMessageContent = input;
+    setInput('');
+    
+    // Optimistic UI: Show user message immediately
+    const optimisticUserMessage: ChatMessage = {
+      id: `temp-${Date.now()}`,
+      role: 'user',
+      content: userMessageContent,
+      createdAt: new Date().toISOString()
+    };
+    setMessages([...messages, optimisticUserMessage]);
+    setIsLoading(true);
+
     try {
-      const response = await api.sendMessage(currentSession, input);
-      setMessages([...messages, response.userMessage, response.assistantMessage]);
-      setInput('');
+      const response = await api.sendMessage(currentSession, userMessageContent);
+      // Replace optimistic message with real messages from server
+      setMessages(prev => [
+        ...prev.filter(m => m.id !== optimisticUserMessage.id),
+        response.userMessage,
+        response.assistantMessage
+      ]);
       await loadSessions();
     } catch (err) {
       console.error('Failed to send message', err);
       toast.error('Failed to send message');
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== optimisticUserMessage.id));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -190,10 +212,10 @@ export default function ChatPage() {
                     className={`max-w-2xl p-3 rounded-lg ${
                       msg.role === 'user'
                         ? 'bg-blue-600 text-white'
-                        : 'bg-white border border-gray-200'
+                        : 'bg-white border border-gray-200 text-black'
                     }`}
                   >
-                    <div className="text-sm prose prose-sm max-w-none dark:prose-invert">
+                    <div className="text-sm prose prose-sm max-w-none prose-headings:text-black prose-p:text-black prose-li:text-black prose-strong:text-black">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {msg.content}
                       </ReactMarkdown>
@@ -204,6 +226,18 @@ export default function ChatPage() {
                   </div>
                 </div>
               ))}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="max-w-2xl p-3 rounded-lg bg-white border border-gray-200">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <div className="animate-pulse">●</div>
+                      <div className="animate-pulse" style={{ animationDelay: '0.2s' }}>●</div>
+                      <div className="animate-pulse" style={{ animationDelay: '0.4s' }}>●</div>
+                      <span className="ml-2 text-sm">AI is thinking...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -219,9 +253,10 @@ export default function ChatPage() {
                 />
                 <button
                   onClick={sendMessage}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                  disabled={isLoading}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Send
+                  {isLoading ? 'Sending...' : 'Send'}
                 </button>
               </div>
             </div>
