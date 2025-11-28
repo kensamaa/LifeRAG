@@ -6,6 +6,36 @@ import { api, ChatSession, ChatMessage, Document } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
+
+// Icons
+const MenuIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+);
+const PlusIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+);
+const SendIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+);
+const UploadIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+);
+const FileIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+);
+const LogOutIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+);
+const XIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+);
+const SunIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+);
+const MoonIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+);
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -15,10 +45,14 @@ export default function ChatPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [uploading, setUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/auth');
@@ -31,6 +65,10 @@ export default function ChatPage() {
   useEffect(() => {
     if (currentSession) {
       loadMessages(currentSession);
+      // Close sidebar on mobile when selecting a session
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false);
+      }
     }
   }, [currentSession]);
 
@@ -73,6 +111,9 @@ export default function ChatPage() {
       const session = await api.createChatSession(`Chat ${new Date().toLocaleString()}`);
       await loadSessions();
       setCurrentSession(session.id);
+      if (window.innerWidth < 768) {
+        setIsSidebarOpen(false);
+      }
     } catch (err) {
       console.error('Failed to create session', err);
       toast.error('Failed to create new chat session');
@@ -85,7 +126,6 @@ export default function ChatPage() {
     const userMessageContent = input;
     setInput('');
     
-    // Optimistic UI: Show user message immediately
     const optimisticUserMessage: ChatMessage = {
       id: `temp-${Date.now()}`,
       role: 'user',
@@ -97,7 +137,6 @@ export default function ChatPage() {
 
     try {
       const response = await api.sendMessage(currentSession, userMessageContent);
-      // Replace optimistic message with real messages from server
       setMessages(prev => [
         ...prev.filter(m => m.id !== optimisticUserMessage.id),
         response.userMessage,
@@ -107,7 +146,6 @@ export default function ChatPage() {
     } catch (err) {
       console.error('Failed to send message', err);
       toast.error('Failed to send message');
-      // Remove optimistic message on error
       setMessages(prev => prev.filter(m => m.id !== optimisticUserMessage.id));
     } finally {
       setIsLoading(false);
@@ -137,103 +175,181 @@ export default function ChatPage() {
     router.push('/auth');
   };
 
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
   return (
-    <div className="flex h-screen bg-gray-100">
-      <div className="w-64 bg-white border-r flex flex-col">
-        <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-black">LifeRAG</h1>
-          <button
-            onClick={handleLogout}
-            className="mt-2 text-sm text-red-600 hover:text-red-800"
+    <div className="flex h-screen bg-background text-foreground overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside 
+        className={`
+          fixed md:static inset-y-0 left-0 z-50 w-72 bg-secondary/50 border-r border-border backdrop-blur-xl
+          transform transition-transform duration-300 ease-in-out
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          flex flex-col
+        `}
+      >
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent">
+              LifeRAG
+            </h1>
+            {mounted && (
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                title="Toggle Theme"
+              >
+                {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              </button>
+            )}
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(false)}
+            className="md:hidden p-2 hover:bg-muted rounded-full text-muted-foreground"
           >
-            Logout
+            <XIcon />
           </button>
         </div>
 
-        <div className="p-4 border-b">
+        <div className="p-4">
           <button
             onClick={createNewSession}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
+            className="w-full py-3 px-4 bg-primary hover:bg-blue-600 text-primary-foreground rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 font-medium"
           >
+            <PlusIcon />
             New Chat
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          <h3 className="text-xs font-semibold text-black mb-2">CHATS</h3>
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+          <div className="text-xs font-semibold text-muted-foreground px-3 mb-2 uppercase tracking-wider">Recent Chats</div>
           {sessions.map((session) => (
             <button
               key={session.id}
               onClick={() => setCurrentSession(session.id)}
-              className={`w-full text-left p-2 rounded mb-1 text-sm ${
-                currentSession === session.id ? 'bg-blue-100' : 'hover:bg-gray-100'
+              className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 group ${
+                currentSession === session.id 
+                  ? 'bg-accent text-accent-foreground shadow-sm' 
+                  : 'hover:bg-muted text-muted-foreground hover:text-foreground'
               }`}
             >
-              <div className="font-medium truncate text-black">{session.title}</div>
-              <div className="text-xs text-black">{session.messageCount} messages</div>
+              <div className="font-medium truncate">{session.title}</div>
+              <div className="text-xs opacity-70 mt-1 flex items-center gap-1">
+                <span>{session.messageCount} messages</span>
+              </div>
             </button>
           ))}
         </div>
 
-        <div className="p-4 border-t">
-          <h3 className="text-xs font-semibold text-black mb-2">DOCUMENTS ({documents.length})</h3>
-          <label className="block">
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileUpload}
-              disabled={uploading}
-              className="hidden"
-            />
-            <div className="w-full py-2 px-4 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm text-center cursor-pointer">
-              {uploading ? 'Uploading...' : 'Upload PDF'}
+        <div className="p-4 border-t border-border bg-secondary/30">
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Documents</h3>
+              <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{documents.length}</span>
             </div>
-          </label>
-          <div className="mt-2 max-h-32 overflow-y-auto">
-            {documents.map((doc) => (
-              <div key={doc.id} className="text-xs p-1 truncate text-black" title={doc.fileName}>
-                📄 {doc.fileName}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            
+            <div className="space-y-1 max-h-32 overflow-y-auto mb-3 custom-scrollbar">
+              {documents.map((doc) => (
+                <div key={doc.id} className="flex items-center gap-2 text-xs p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title={doc.fileName}>
+                  <FileIcon />
+                  <span className="truncate">{doc.fileName}</span>
+                </div>
+              ))}
+            </div>
 
-      <div className="flex-1 flex flex-col">
+            <label className="block">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                disabled={uploading}
+                className="hidden"
+              />
+              <div className="w-full py-2 px-4 border border-dashed border-border hover:border-primary hover:bg-accent/50 text-muted-foreground hover:text-accent-foreground rounded-lg text-sm text-center cursor-pointer transition-all flex items-center justify-center gap-2">
+                <UploadIcon />
+                {uploading ? 'Uploading...' : 'Upload PDF'}
+              </div>
+            </label>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+          >
+            <LogOutIcon />
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col relative w-full">
+        {/* Header */}
+        <header className="h-16 border-b border-border flex items-center px-4 justify-between md:justify-end bg-background/80 backdrop-blur-md sticky top-0 z-10">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="md:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground"
+          >
+            <MenuIcon />
+          </button>
+          <div className="md:hidden font-semibold flex items-center gap-2">
+            LifeRAG
+            {mounted && (
+              <button
+                onClick={toggleTheme}
+                className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                title="Toggle Theme"
+              >
+                {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              </button>
+            )}
+          </div>
+          <div className="w-8 md:w-0"></div> {/* Spacer for centering */}
+        </header>
+
         {currentSession ? (
           <>
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
                 >
                   <div
-                    className={`max-w-2xl p-3 rounded-lg ${
+                    className={`max-w-[85%] md:max-w-2xl p-4 rounded-2xl shadow-sm ${
                       msg.role === 'user'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white border border-gray-200 text-black'
+                        ? 'bg-primary text-primary-foreground rounded-br-none'
+                        : 'bg-card border border-border text-card-foreground rounded-bl-none'
                     }`}
                   >
-                    <div className="text-sm prose prose-sm max-w-none prose-headings:text-black prose-p:text-black prose-li:text-black prose-strong:text-black">
+                    <div className="text-sm md:text-base prose prose-sm dark:prose-invert max-w-none break-words">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {msg.content}
                       </ReactMarkdown>
                     </div>
-                    <div className="text-xs mt-1 opacity-70">
-                      {new Date(msg.createdAt).toLocaleTimeString()}
+                    <div className={`text-[10px] mt-2 ${msg.role === 'user' ? 'text-blue-100' : 'text-muted-foreground'}`}>
+                      {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
                   </div>
                 </div>
               ))}
               {isLoading && (
-                <div className="flex justify-start">
-                  <div className="max-w-2xl p-3 rounded-lg bg-white border border-gray-200">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <div className="animate-pulse">●</div>
-                      <div className="animate-pulse" style={{ animationDelay: '0.2s' }}>●</div>
-                      <div className="animate-pulse" style={{ animationDelay: '0.4s' }}>●</div>
-                      <span className="ml-2 text-sm">AI is thinking...</span>
+                <div className="flex justify-start animate-in fade-in duration-300">
+                  <div className="bg-card border border-border p-4 rounded-2xl rounded-bl-none shadow-sm">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                      <div className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+                      <div className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
                     </div>
                   </div>
                 </div>
@@ -241,35 +357,49 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t bg-white p-4">
-              <div className="flex gap-2">
+            <div className="p-4 md:p-6 bg-background/80 backdrop-blur-md border-t border-border sticky bottom-0 z-10">
+              <div className="max-w-4xl mx-auto relative">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                  placeholder="Type your message..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+                  placeholder="Ask anything..."
+                  className="w-full pl-6 pr-14 py-4 bg-secondary/50 border border-border rounded-full focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm text-foreground placeholder:text-muted-foreground"
                 />
                 <button
                   onClick={sendMessage}
-                  disabled={isLoading}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isLoading || !input.trim()}
+                  className="absolute right-2 top-2 p-2 bg-primary text-primary-foreground rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg active:scale-95"
                 >
-                  {isLoading ? 'Sending...' : 'Send'}
+                  <SendIcon />
                 </button>
+              </div>
+              <div className="text-center mt-2">
+                <p className="text-[10px] text-muted-foreground">AI can make mistakes. Check important info.</p>
               </div>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-black">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold mb-2">Welcome to LifeRAG</h2>
-              <p>Create a new chat or select an existing one to start</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-500">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 text-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
+            <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-foreground to-muted-foreground bg-clip-text text-transparent">
+              Welcome to LifeRAG
+            </h2>
+            <p className="text-muted-foreground max-w-md mb-8">
+              Your personal AI assistant powered by your own documents. Upload a PDF or start a new chat to begin.
+            </p>
+            <button
+              onClick={createNewSession}
+              className="px-8 py-3 bg-primary hover:bg-blue-600 text-primary-foreground rounded-full font-medium shadow-lg shadow-blue-500/25 transition-all hover:-translate-y-0.5"
+            >
+              Start a Conversation
+            </button>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
