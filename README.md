@@ -125,6 +125,7 @@ chmod +x install.sh
 # Generate gRPC stubs
 .\generate_protos.ps1  # or ./generate_protos.sh
 
+.\venv\Scripts\Activate.ps1
 # Start gRPC server
 python grpc_server.py
 ```

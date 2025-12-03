@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5104';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7051';
 
 export interface AuthResponse {
   token: string;
