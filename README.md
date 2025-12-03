@@ -90,6 +90,23 @@ Upload your PDFs, documents, and notes. Chat with them using AI. Your data never
 - Background job processing
 - Efficient vector search
 
+## 📸 Screenshots
+
+### Authentication
+![Authentication](pics/auth.png)
+
+### Home (Dark Mode)
+![Home Dark](pics/home.png)
+
+### Home (Light Mode)
+![Home Light](pics/homeWhite.png)
+
+### Docker Containers
+![Docker](pics/docker.png)
+
+### Ollama RAM Consumption
+![Ollama RAM](pics/ramOllama.png)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
